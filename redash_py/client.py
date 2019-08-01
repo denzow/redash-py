@@ -12,6 +12,9 @@ class RedashAPIClient(object):
         self.s = requests.Session()
         self.s.headers.update({'Authorization': f'Key {api_key}'})
 
+    def is_exist_by_query_id(self, query_id: int):
+        return self.get_query_by_id(query_id) is not None
+
     def create_query(self, name, data_source_name: str, query: str, description='', is_publish: bool = True):
         data_source = self.get_data_source_by_name(data_source_name)
         data_source_id = data_source['id']
@@ -63,10 +66,29 @@ class RedashAPIClient(object):
             description: str = None,
             is_publish: bool = True
     ):
-        pass
+        if self.is_exist_by_query_id(query_id=query_id):
+            return self.update_query(
+                query_id,
+                name,
+                data_source_name,
+                query,
+                description,
+                is_publish
+            )
+        else:
+            return self.create_query(
+                name,
+                data_source_name,
+                query,
+                description,
+                is_publish
+            )
 
     def get_query_by_id(self, query_id):
-        return self._get(f'queries/{query_id}')
+        try:
+            return self._get(f'queries/{query_id}')
+        except ResourceNotFoundException:
+            return None
 
     def get_data_sources(self):
         """
@@ -118,6 +140,8 @@ class RedashAPIClient(object):
         res = self.s.get(f'{self.host}/api/{uri}')
 
         if res.status_code != 200:
+            if res.status_code == 404:
+                raise ResourceNotFoundException(f'Retrieve data from URL: /api/{uri} failed.')
             raise ErrorResponseException(f'Retrieve data from URL: /api/{uri} failed.', status_code=res.status_code)
 
         return res.json()
@@ -132,6 +156,8 @@ class RedashAPIClient(object):
         res = self.s.post(f'{self.host}/api/{uri}', data=data)
 
         if res.status_code != 200:
+            if res.status_code == 404:
+                raise ResourceNotFoundException(f'Post data from URL: /api/{uri} failed.')
             raise ErrorResponseException(f'Post data to URL: /api/{uri} failed.', status_code=res.status_code)
 
         return res.json()
@@ -140,6 +166,9 @@ class RedashAPIClient(object):
         res = self.s.delete(f'{self.host}/api/{uri}')
 
         if res.status_code != 200:
-            raise ErrorResponseException(f'Delete data from URL: /api/{uri} failed.', status_code=res.status_code)
+            if res.status_code == 404:
+                raise ResourceNotFoundException(f'Delete data from URL: /api/{uri} failed.')
+            else:
+                raise ErrorResponseException(f'Delete data from URL: /api/{uri} failed.', status_code=res.status_code)
 
         return res.json()
