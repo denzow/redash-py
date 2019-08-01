@@ -1,3 +1,4 @@
+import os
 import json
 import requests
 
@@ -5,9 +6,15 @@ from .exceptions import ResourceNotFoundException, ErrorResponseException
 
 
 class RedashAPIClient(object):
-    def __init__(self, api_key, host):
-        self.host = host
-        self.api_key = api_key
+    def __init__(self, api_key=None, host=None):
+        if host:
+            self.host = host
+        else:
+            self.host = os.environ['REDASH_SERVICE_URL']
+        if api_key:
+            self.api_key = api_key
+        else:
+            self.api_key = os.environ['REDASH_API_KEY']
 
         self.s = requests.Session()
         self.s.headers.update({'Authorization': f'Key {api_key}'})
@@ -27,7 +34,7 @@ class RedashAPIClient(object):
         res = self._post('queries', payload)
 
         if is_publish:
-            self.update_query(
+            return self.update_query(
                 query_id=res['id'],
                 is_publish=is_publish,
             )
