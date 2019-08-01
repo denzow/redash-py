@@ -2,20 +2,24 @@ import os
 import json
 import requests
 
-from .exceptions import ResourceNotFoundException, ErrorResponseException
+from .exceptions import (
+    ResourceNotFoundException,
+    ErrorResponseException,
+    ParameterException
+)
 
 
 class RedashAPIClient(object):
     def __init__(self, api_key=None, host=None):
-        if host:
-            self.host = host
-        else:
-            self.host = os.environ['REDASH_SERVICE_URL']
         if api_key:
             self.api_key = api_key
         else:
-            self.api_key = os.environ['REDASH_API_KEY']
-
+            self.api_key = os.environ.get('REDASH_API_KEY')
+        if host:
+            self.host = host
+        else:
+            self.host = os.environ.get('REDASH_SERVICE_URL')
+        self._validate_init()
         self.s = requests.Session()
         self.s.headers.update({'Authorization': f'Key {api_key}'})
 
@@ -179,3 +183,11 @@ class RedashAPIClient(object):
                 raise ErrorResponseException(f'Delete data from URL: /api/{uri} failed.', status_code=res.status_code)
 
         return res.json()
+
+    def _validate_init(self):
+        if not self.api_key:
+            raise ParameterException('not set REDASH_API_KEY environment value')
+
+        if not self.host:
+            raise ParameterException('not set REDASH_SERVICE_URL environment value')
+

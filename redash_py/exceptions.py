@@ -2,6 +2,10 @@ class RedashPyException(Exception):
     """base exception"""
 
 
+class ParameterException(RedashPyException):
+    """param error"""
+
+
 class ResourceNotFoundException(RedashPyException):
     """ not found """
 
