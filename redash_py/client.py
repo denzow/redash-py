@@ -21,7 +21,7 @@ class RedashAPIClient(object):
             self.host = os.environ.get('REDASH_SERVICE_URL')
         self._validate_init()
         self.s = requests.Session()
-        self.s.headers.update({'Authorization': f'Key {api_key}'})
+        self.s.headers.update({'Authorization': f'Key {self.api_key}'})
 
     def is_exist_by_query_id(self, query_id: int):
         return self.get_query_by_id(query_id) is not None
