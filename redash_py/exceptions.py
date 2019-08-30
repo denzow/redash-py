@@ -10,6 +10,10 @@ class ResourceNotFoundException(RedashPyException):
     """ not found """
 
 
+class TimeoutException(RedashPyException):
+    """ query not return result"""
+
+
 class ErrorResponseException(RedashPyException):
     def __init__(self, *args, status_code):
         super().__init__(*args)
@@ -17,4 +21,4 @@ class ErrorResponseException(RedashPyException):
 
     def __str__(self):
         msg = super().__str__()
-        return f'[status:{self.status_code}]: f{msg}'
+        return f'[status:{self.status_code}]: {msg}'

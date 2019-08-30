@@ -5,7 +5,8 @@ import requests
 from .exceptions import (
     ResourceNotFoundException,
     ErrorResponseException,
-    ParameterException
+    ParameterException,
+    TimeoutException,
 )
 
 
@@ -147,9 +148,114 @@ class RedashAPIClient(object):
                 return data_source
         raise ResourceNotFoundException(f'{name} is not found')
 
+    def get_query_results_by_id(self, query_id: int, retry_count=5, **kwargs):
+        """
+        {
+            "query_result": {
+                "retrieved_at": "2019-08-30T08:30:27.967Z",
+                "query_hash": "xxxxxxxxx",
+                "query": "select count(*) from hoge;",
+                "runtime": 0.1,
+                "data": {
+                    "rows": [
+                        {
+                            "count(*)": 0
+                        }
+                    ],
+                    "columns": [
+                        {
+                            "friendly_name": "count(*)",
+                            "type": "integer",
+                            "name": "count(*)"
+                        }
+                    ]
+                },
+                "id": 1,
+                "data_source_id": 1
+            }
+        }
+        :param query_id:
+        :param retry_count:
+        :param kwargs:
+        :return:
+        """
+        res = self._post('queries/{}/results'.format(query_id), payload=kwargs)
+        # already has a result
+        if 'query_result' in res:
+            return res
+
+        # running job now
+        job_id = res['job']['id']
+        return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
+
+    def get_adhoc_query_result(self, query: str, data_source_name: str, retry_count=5, **kwargs):
+        """
+        {
+            "query_result": {
+                "retrieved_at": "2019-08-30T08:30:27.967Z",
+                "query_hash": "xxxxxxxxx",
+                "query": "select count(*) from hoge;",
+                "runtime": 0.1,
+                "data": {
+                    "rows": [
+                        {
+                            "count(*)": 0
+                        }
+                    ],
+                    "columns": [
+                        {
+                            "friendly_name": "count(*)",
+                            "type": "integer",
+                            "name": "count(*)"
+                        }
+                    ]
+                },
+                "id": 1,
+                "data_source_id": 1
+            }
+        }
+        :param query:
+        :param data_source_name:
+        :param retry_count:
+        :param kwargs:
+        :return:
+        """
+        data_source = self.get_data_source_by_name(data_source_name)
+        data_source_id = data_source['id']
+        params = {
+            'query': query,
+            'query_id': 'adhoc',
+            'data_source_id': data_source_id,
+            'parameters': kwargs,
+        }
+        res = self._post('query_results', payload=params)
+        # already has a result
+        if 'query_result' in res:
+            return res
+
+        # running job now
+        job_id = res['job']['id']
+        return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
+
+    def _check_and_wait_query_result(self, job_id, retry_count):
+        """
+        wait return result for job
+        """
+        # running job now
+        retry = 0
+        while True:
+            res = self._get(f'jobs/{job_id}')
+            job = res['job']
+            if job['query_result_id']:
+                break
+            retry += 1
+            if retry_count <= retry:
+                raise TimeoutException('Query Result not returned.(retried {})'.format(retry_count))
+        query_result_id = job['query_result_id']
+        return self._get(f'query_results/{query_result_id}')
+
     def _get(self, uri):
         res = self.s.get(f'{self.host}/api/{uri}')
-
         if res.status_code != 200:
             if res.status_code == 404:
                 raise ResourceNotFoundException(f'Retrieve data from URL: /api/{uri} failed.')
