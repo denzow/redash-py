@@ -11,7 +11,7 @@ from .exceptions import (
 
 
 class RedashAPIClient(object):
-    def __init__(self, api_key=None, host=None):
+    def __init__(self, api_key=None, host=None, proxy=None, timeout=None):
         if api_key:
             self.api_key = api_key
         else:
@@ -20,9 +20,25 @@ class RedashAPIClient(object):
             self.host = host
         else:
             self.host = os.environ.get('REDASH_SERVICE_URL')
+        if timeout:
+            self.timeout = timeout
+        else:
+            self.timeout = os.environ.get('REDASH_TIMEOUT') if os.environ.get('REDASH_TIMEOUT') else 10
+
+        if proxy:
+            self.proxy = proxy
+        else:
+            self.proxy = os.environ.get('REDASH_HTTP_PROXY') if os.environ.get('REDASH_HTTP_PROXY') else None
+
         self._validate_init()
         self.s = requests.Session()
         self.s.headers.update({'Authorization': f'Key {self.api_key}'})
+        if self.proxy:
+            self.s.proxies.update({'http': self.proxy, 'https': self.proxy})
+
+    def get_server_version(self):
+        res = self._get('status.json', prefix='')
+        return res['version']
 
     def is_exist_by_query_id(self, query_id: int):
         return self.get_query_by_id(query_id) is not None
@@ -254,39 +270,42 @@ class RedashAPIClient(object):
         query_result_id = job['query_result_id']
         return self._get(f'query_results/{query_result_id}')
 
-    def _get(self, uri):
-        res = self.s.get(f'{self.host}/api/{uri}')
+    def _get(self, uri, prefix='/api/'):
+        url = f'{self.host}{prefix}{uri}'
+        res = self.s.get(url, timeout=self.timeout)
         if res.status_code != 200:
             if res.status_code == 404:
-                raise ResourceNotFoundException(f'Retrieve data from URL: /api/{uri} failed.')
-            raise ErrorResponseException(f'Retrieve data from URL: /api/{uri} failed.', status_code=res.status_code)
+                raise ResourceNotFoundException(f'Retrieve data from URL: {url} failed.')
+            raise ErrorResponseException(f'Retrieve data from URL: {url} failed.', status_code=res.status_code)
 
         return res.json()
 
-    def _post(self, uri, payload=None):
+    def _post(self, uri, payload=None, prefix='/api/'):
+        url = f'{self.host}{prefix}{uri}'
         if not payload:
             data = json.dumps({})
         else:
             data = json.dumps(payload)
 
         self.s.headers.update({'Content-Type': 'application/json'})
-        res = self.s.post(f'{self.host}/api/{uri}', data=data)
+        res = self.s.post(f'{url}', data=data)
 
         if res.status_code != 200:
             if res.status_code == 404:
-                raise ResourceNotFoundException(f'Post data from URL: /api/{uri} failed.')
-            raise ErrorResponseException(f'Post data to URL: /api/{uri} failed.', status_code=res.status_code)
+                raise ResourceNotFoundException(f'Post data from URL: {url} failed.')
+            raise ErrorResponseException(f'Post data to URL: {url} failed.', status_code=res.status_code)
 
         return res.json()
 
     def _delete(self, uri):
-        res = self.s.delete(f'{self.host}/api/{uri}')
+        url = f'{self.host}{prefix}{uri}'
+        res = self.s.delete(f'{url}')
 
         if res.status_code != 200:
             if res.status_code == 404:
-                raise ResourceNotFoundException(f'Delete data from URL: /api/{uri} failed.')
+                raise ResourceNotFoundException(f'Delete data from URL: {url} failed.')
             else:
-                raise ErrorResponseException(f'Delete data from URL: /api/{uri} failed.', status_code=res.status_code)
+                raise ErrorResponseException(f'Delete data from URL: {url} failed.', status_code=res.status_code)
 
         return res.json()
 
