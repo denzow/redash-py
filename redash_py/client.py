@@ -253,6 +253,42 @@ class RedashAPIClient(object):
         job_id = res['job']['id']
         return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
 
+    def get_data_source_schema(self, data_source_name, retry_count=5):
+        """
+        {
+            "schema": [
+                {
+                    "name": "XXXXX",
+                    "columns": [
+                        "deal_name",
+                        "deal_id",
+                        "company_id",
+                        "pipeline_id"
+                    ]
+                },
+                {
+                    "name": "VVVVVV",
+                    "columns": [
+                        "pipeline_id",
+                        "display_order",
+                        "label",
+                        "active"
+                    ]
+                },
+            ]
+        }
+
+
+        """
+        data_source = self.get_data_source_by_name(data_source_name)
+        data_source_id = data_source['id']
+        res = self._get(f'data_sources/{data_source_id}/schema')
+        # running job now
+        if 'job' in res:
+            job_id = res['job']['id']
+            return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
+        return res
+
     def _check_and_wait_query_result(self, job_id, retry_count):
         """
         wait return result for job

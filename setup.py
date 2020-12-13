@@ -21,7 +21,8 @@ setup(
             "redashpy = redash_py.command:main"
         ]
     },
-    long_description=readme,
+    long_description='',
+    long_description_content_type="text/markdown",
     author='denzow',
     author_email='denzow@gmail.com',
     url='https://github.com/denzow/redash-py',
