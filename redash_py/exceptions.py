@@ -14,6 +14,10 @@ class TimeoutException(RedashPyException):
     """ query not return result"""
 
 
+class SQLErrorException(RedashPyException):
+    """ query no executable"""
+
+
 class ErrorResponseException(RedashPyException):
     def __init__(self, *args, status_code):
         super().__init__(*args)

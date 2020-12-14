@@ -7,6 +7,7 @@ from .exceptions import (
     ErrorResponseException,
     ParameterException,
     TimeoutException,
+    SQLErrorException,
 )
 
 
@@ -300,6 +301,9 @@ class RedashAPIClient(object):
             job = res['job']
             if job['query_result_id']:
                 break
+            # error
+            if job['status'] == 4:
+                raise SQLErrorException(job['error'])
             retry += 1
             if retry_count <= retry:
                 raise TimeoutException('Query Result not returned.(retried {})'.format(retry_count))
