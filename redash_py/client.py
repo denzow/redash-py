@@ -337,7 +337,7 @@ class RedashAPIClient(object):
 
         return res.json()
 
-    def _delete(self, uri):
+    def _delete(self, uri, prefix='/api/'):
         url = f'{self.host}{prefix}{uri}'
         res = self.s.delete(f'{url}')
 
