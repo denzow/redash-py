@@ -205,7 +205,7 @@ class RedashAPIClient(object):
         job_id = res['job']['id']
         return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
 
-    def get_adhoc_query_result(self, query: str, data_source_name: str, retry_count=5, **kwargs):
+    def get_adhoc_query_result(self, query: str, data_source_name: str, retry_count=5, max_age=-1, **kwargs):
         """
         {
             "query_result": {
@@ -243,6 +243,7 @@ class RedashAPIClient(object):
             'query': query,
             'query_id': 'adhoc',
             'data_source_id': data_source_id,
+            'max_age': max_age,
             'parameters': kwargs,
         }
         res = self._post('query_results', payload=params)
