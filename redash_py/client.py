@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import urllib
 
 from .exceptions import (
     ResourceNotFoundException,
@@ -312,7 +313,7 @@ class RedashAPIClient(object):
         return self._get(f'query_results/{query_result_id}')
 
     def _get(self, uri, prefix='/api/'):
-        url = f'{self.host}{prefix}{uri}'
+        url = urllib.parse.urljoin(f'{self.host}{prefix}', uri)
         res = self.s.get(url, timeout=self.timeout)
         if res.status_code != 200:
             if res.status_code == 404:
