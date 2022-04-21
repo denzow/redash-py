@@ -1,5 +1,7 @@
 import os
 import json
+import time
+
 import requests
 import urllib
 
@@ -206,7 +208,9 @@ class RedashAPIClient(object):
         job_id = res['job']['id']
         return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
 
-    def get_adhoc_query_result(self, query: str, data_source_name: str, retry_count=5, max_age=-1, **kwargs):
+    def get_adhoc_query_result(
+            self, query: str, data_source_name: str, retry_count=5, max_age=-1, retry_interval=0, **kwargs
+    ):
         """
         {
             "query_result": {
@@ -254,7 +258,7 @@ class RedashAPIClient(object):
 
         # running job now
         job_id = res['job']['id']
-        return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
+        return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count, retry_interval=retry_interval)
 
     def get_data_source_schema(self, data_source_name, retry_count=5):
         """
@@ -292,7 +296,7 @@ class RedashAPIClient(object):
             return self._check_and_wait_query_result(job_id=job_id, retry_count=retry_count)
         return res
 
-    def _check_and_wait_query_result(self, job_id, retry_count):
+    def _check_and_wait_query_result(self, job_id, retry_count, retry_interval=0):
         """
         wait return result for job
         """
@@ -309,6 +313,7 @@ class RedashAPIClient(object):
             retry += 1
             if retry_count <= retry:
                 raise TimeoutException('Query Result not returned.(retried {})'.format(retry_count))
+            time.sleep(retry_interval)
         query_result_id = job['query_result_id']
         return self._get(f'query_results/{query_result_id}')
 
